@@ -2,10 +2,9 @@
 
 import requests
 import json
-import time
 import datetime
-
-BASE_URL = "http://ci.ap.int.zone/job/feature-branch-run-tests"
+import argparse
+import sys
 
 def incomplete(job_url):
     data = json.loads(requests.get(job_url + "/api/json").text)
@@ -18,13 +17,17 @@ def incomplete(job_url):
             yield build_data
 
 def frozen(job_url, time_delta):
-    for incomplete_job in incomplete(BASE_URL):
+    for incomplete_job in incomplete(job_url):
         scheduled_at = incomplete_job["timestamp"]
         delta = datetime.datetime.now() - datetime.datetime.fromtimestamp(scheduled_at/1000)
         if delta > time_delta:
             yield incomplete_job
 
 if __name__ == "__main__":
+    arg_parser = argparse.ArgumentParser()
+    arg_parser.add_argument("--job", metavar="URL", dest="url", required=True, action="store")
+    args = arg_parser.parse_args(sys.argv[1:])
+
     treat_as_frozen_delta = datetime.timedelta(days=1)
-    for frozen_jon in frozen(BASE_URL, treat_as_frozen_delta):
+    for frozen_jon in frozen(args.url, treat_as_frozen_delta):
         print (frozen_jon["url"])
